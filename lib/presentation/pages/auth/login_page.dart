@@ -1,8 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+// Import untuk format tanggal Indonesia
+import 'package:intl/date_symbol_data_local.dart'; 
+
 import '../../../core/constants/app_colors.dart';
 import '../../../data/services/auth_service.dart';
-// import '../dashboard/dashboard_page.dart'; // Nanti kita buat ini
+
+// Import Halaman Dashboard
+import '../dashboard/user_dashboard_page.dart';
+import '../dashboard/admin_dashboard_page.dart'; // Pastikan file ini ada
 
 class LoginPage extends StatefulWidget {
   const LoginPage({super.key});
@@ -12,17 +18,16 @@ class LoginPage extends StatefulWidget {
 }
 
 class _LoginPageState extends State<LoginPage> {
-  // Controller untuk input text
   final TextEditingController _nipController = TextEditingController();
   final TextEditingController _passwordController = TextEditingController();
   
   bool _isLoading = false;
-  bool _isObscure = true; // Untuk sembunyikan password
+  bool _isObscure = true; 
 
   final AuthService _authService = AuthService();
 
-  // Fungsi saat tombol Login ditekan
   Future<void> _handleLogin() async {
+    // 1. Validasi Input Kosong
     if (_nipController.text.isEmpty || _passwordController.text.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text("NIP dan Password harus diisi"), backgroundColor: AppColors.error),
@@ -32,6 +37,7 @@ class _LoginPageState extends State<LoginPage> {
 
     setState(() => _isLoading = true);
 
+    // 2. Panggil API Login
     final result = await _authService.login(
       _nipController.text,
       _passwordController.text,
@@ -39,16 +45,32 @@ class _LoginPageState extends State<LoginPage> {
 
     setState(() => _isLoading = false);
 
+    // 3. Cek Hasil Login
     if (result['success'] == true) {
-      // Login Sukses
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text("Login Berhasil!"), backgroundColor: AppColors.success),
-      );
       
-      // Navigasi ke Dashboard (Sementara kita print dulu sebelum file dashboard dibuat)
-      // Navigator.pushReplacement(context, MaterialPageRoute(builder: (context) => const DashboardPage()));
-      print("Navigasi ke Dashboard User: ${result['data']['name']}");
+      // A. Inisialisasi Locale (PENTING: Agar tidak error tanggal di dashboard)
+      await initializeDateFormatting('id_ID', null);
+
+      // B. Cek Role User (Admin atau User Biasa)
+      // Pastikan backend mengirim field 'role' di dalam object 'data'
+      String role = result['data']['role']; 
+
+      if (!mounted) return;
+
+      if (role == 'admin') {
+        // -> Masuk ke Dashboard Admin
+        Navigator.pushReplacement(
+          context, 
+          MaterialPageRoute(builder: (context) => const AdminDashboardPage())
+        );
+      } else {
+        // -> Masuk ke Dashboard User (Karyawan)
+        Navigator.pushReplacement(
+          context, 
+          MaterialPageRoute(builder: (context) => const UserDashboardPage())
+        );
+      }
 
     } else {
       // Login Gagal
@@ -66,7 +88,7 @@ class _LoginPageState extends State<LoginPage> {
       body: SingleChildScrollView(
         child: Column(
           children: [
-            // 1. Header Bagian Atas (Navy Blue)
+            // --- HEADER (Navy Blue) ---
             Container(
               height: 300,
               width: double.infinity,
@@ -80,7 +102,6 @@ class _LoginPageState extends State<LoginPage> {
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  // Icon atau Logo
                   const Icon(Icons.location_on_outlined, size: 80, color: AppColors.accent),
                   const SizedBox(height: 10),
                   Text(
@@ -93,16 +114,13 @@ class _LoginPageState extends State<LoginPage> {
                   ),
                   Text(
                     "Face & Location Detection",
-                    style: GoogleFonts.poppins(
-                      color: Colors.white70,
-                      fontSize: 14,
-                    ),
+                    style: GoogleFonts.poppins(color: Colors.white70, fontSize: 14),
                   ),
                 ],
               ),
             ),
 
-            // 2. Form Login
+            // --- FORM LOGIN ---
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 30),
               child: Container(
@@ -124,9 +142,7 @@ class _LoginPageState extends State<LoginPage> {
                     Text(
                       "Silakan Masuk",
                       style: GoogleFonts.poppins(
-                        color: AppColors.primary,
-                        fontSize: 20,
-                        fontWeight: FontWeight.w600,
+                        color: AppColors.primary, fontSize: 20, fontWeight: FontWeight.w600
                       ),
                     ),
                     const SizedBox(height: 20),
@@ -137,9 +153,7 @@ class _LoginPageState extends State<LoginPage> {
                       decoration: InputDecoration(
                         labelText: "NIP Karyawan",
                         prefixIcon: const Icon(Icons.badge_outlined, color: AppColors.primary),
-                        border: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(12),
-                        ),
+                        border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
                         focusedBorder: OutlineInputBorder(
                           borderRadius: BorderRadius.circular(12),
                           borderSide: const BorderSide(color: AppColors.primary),
@@ -166,9 +180,7 @@ class _LoginPageState extends State<LoginPage> {
                             });
                           },
                         ),
-                        border: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(12),
-                        ),
+                        border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
                         focusedBorder: OutlineInputBorder(
                           borderRadius: BorderRadius.circular(12),
                           borderSide: const BorderSide(color: AppColors.primary),
@@ -180,9 +192,7 @@ class _LoginPageState extends State<LoginPage> {
                     Align(
                       alignment: Alignment.centerRight,
                       child: TextButton(
-                        onPressed: () {
-                          // Fitur Lupa Password bisa ditambahkan nanti
-                        },
+                        onPressed: () {},
                         child: Text(
                           "Lupa Password?", 
                           style: GoogleFonts.poppins(color: AppColors.textSecondary),
@@ -200,18 +210,14 @@ class _LoginPageState extends State<LoginPage> {
                         onPressed: _isLoading ? null : _handleLogin,
                         style: ElevatedButton.styleFrom(
                           backgroundColor: AppColors.primary,
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(12),
-                          ),
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                         ),
                         child: _isLoading 
                           ? const CircularProgressIndicator(color: Colors.white)
                           : Text(
                               "LOGIN",
                               style: GoogleFonts.poppins(
-                                fontSize: 16, 
-                                fontWeight: FontWeight.bold,
-                                color: Colors.white, // Pastikan teks putih
+                                fontSize: 16, fontWeight: FontWeight.bold, color: Colors.white
                               ),
                             ),
                       ),
@@ -221,11 +227,11 @@ class _LoginPageState extends State<LoginPage> {
               ),
             ),
             
-            // Footer text
             Text(
               "Versi 1.0.0",
               style: GoogleFonts.poppins(color: Colors.grey[400]),
             ),
+            const SizedBox(height: 20),
           ],
         ),
       ),

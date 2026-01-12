@@ -39,7 +39,9 @@ dependencies:
 
   # Features
   geolocator: ^11.0.0       # GPS
-  camera: ^0.10.5+9         # Kamera
+  camera: ^0.10.5+9  # Kamera
+  path_provider: ^2.1.2      
+  path: ^1.9.0
   google_mlkit_face_detection: ^0.11.0 # Deteksi Wajah (Google ML Kit)
   intl: ^0.19.0             # Format Tanggal/Waktu
   
@@ -51,6 +53,7 @@ dependencies:
 
   # Permission Handler (Penting untuk Android/iOS)
   permission_handler: ^11.3.0
+  image_picker: ^1.2.1
 
 
 dev_dependencies:

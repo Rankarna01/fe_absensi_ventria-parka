@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
 import '../../core/constants/api_constants.dart';
+import 'dart:io';
 
 class AuthService {
   // Fungsi Login
@@ -44,5 +45,48 @@ class AuthService {
   Future<void> logout() async {
     final prefs = await SharedPreferences.getInstance();
     await prefs.clear();
+  }
+
+  Future<Map<String, dynamic>> updateProfile({
+    required int userId,
+    required String name,
+    String? password,
+    File? imageFile,
+  }) async {
+    try {
+      var request = http.MultipartRequest(
+        'POST',
+        Uri.parse("${ApiConstants.baseUrl}/auth/update_profile.php"),
+      );
+
+      request.fields['user_id'] = userId.toString();
+      request.fields['name'] = name;
+      
+      if (password != null && password.isNotEmpty) {
+        request.fields['password'] = password;
+      }
+
+      if (imageFile != null) {
+        var pic = await http.MultipartFile.fromPath('image', imageFile.path);
+        request.files.add(pic);
+      }
+
+      var streamedResponse = await request.send();
+      var response = await http.Response.fromStream(streamedResponse);
+
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+        // Jika sukses, update data session lokal
+        if (data['success'] == true) {
+          final prefs = await SharedPreferences.getInstance();
+          await prefs.setString('user_data', jsonEncode(data['data']));
+        }
+        return data;
+      } else {
+        return {'success': false, 'message': 'Server Error'};
+      }
+    } catch (e) {
+      return {'success': false, 'message': e.toString()};
+    }
   }
 }
