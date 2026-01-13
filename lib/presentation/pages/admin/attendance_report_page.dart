@@ -17,6 +17,9 @@ class _AttendanceReportPageState extends State<AttendanceReportPage> {
   DateTime _selectedDate = DateTime.now();
   late Future<List<dynamic>> _reportFuture;
 
+  // Variabel untuk status loading export
+  bool _isExporting = false;
+
   @override
   void initState() {
     super.initState();
@@ -57,6 +60,99 @@ class _AttendanceReportPageState extends State<AttendanceReportPage> {
     }
   }
 
+  // --- FITUR EXPORT EXCEL (CSV) ---
+
+  // 1. Tampilkan Dialog Pilih Bulan/Tahun
+  Future<void> _showExportDialog() async {
+    int selectedMonth = DateTime.now().month;
+    int selectedYear = DateTime.now().year;
+
+    await showDialog(
+      context: context,
+      builder: (context) {
+        // Menggunakan StatefulBuilder agar dropdown bisa update state lokal dialog
+        return StatefulBuilder(
+          builder: (context, setStateDialog) {
+            return AlertDialog(
+              title: Text("Export Laporan Bulanan", style: GoogleFonts.poppins(fontWeight: FontWeight.bold)),
+              content: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text("Pilih periode laporan yang ingin diunduh:", style: GoogleFonts.poppins(fontSize: 12)),
+                  const SizedBox(height: 20),
+                  Row(
+                    children: [
+                      // Dropdown Bulan
+                      Expanded(
+                        child: DropdownButtonFormField<int>(
+                          value: selectedMonth,
+                          items: List.generate(12, (index) {
+                            return DropdownMenuItem(
+                              value: index + 1,
+                              child: Text(DateFormat('MMMM', 'id_ID').format(DateTime(2024, index + 1, 1))),
+                            );
+                          }),
+                          onChanged: (val) => setStateDialog(() => selectedMonth = val!),
+                          decoration: const InputDecoration(labelText: "Bulan", border: OutlineInputBorder()),
+                        ),
+                      ),
+                      const SizedBox(width: 10),
+                      // Dropdown Tahun
+                      Expanded(
+                        child: DropdownButtonFormField<int>(
+                          value: selectedYear,
+                          items: [2024, 2025, 2026, 2027].map((y) {
+                            return DropdownMenuItem(value: y, child: Text(y.toString()));
+                          }).toList(),
+                          onChanged: (val) => setStateDialog(() => selectedYear = val!),
+                          decoration: const InputDecoration(labelText: "Tahun", border: OutlineInputBorder()),
+                        ),
+                      ),
+                    ],
+                  )
+                ],
+              ),
+              actions: [
+                TextButton(onPressed: () => Navigator.pop(context), child: const Text("Batal")),
+                ElevatedButton(
+                  onPressed: () {
+                    Navigator.pop(context); // Tutup dialog
+                    _processExport(selectedMonth, selectedYear); // Lanjut proses export
+                  },
+                  style: ElevatedButton.styleFrom(backgroundColor: AppColors.primary),
+                  child: const Text("Download CSV", style: TextStyle(color: Colors.white)),
+                )
+              ],
+            );
+          }
+        );
+      }
+    );
+  }
+
+  // 2. Proses Download & Buka File
+  Future<void> _processExport(int m, int y) async {
+    setState(() => _isExporting = true);
+    
+    // Tampilkan notif loading
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text("Sedang mengunduh laporan... Mohon tunggu."), duration: Duration(seconds: 2))
+    );
+
+    // Panggil Service Export yang sudah dibuat di admin_service.dart
+    final success = await _service.exportReport(m, y);
+
+    setState(() => _isExporting = false);
+
+    if (!success) {
+      if(!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text("Gagal mengunduh file atau data kosong."), backgroundColor: AppColors.error)
+      );
+    } 
+    // Jika sukses, file otomatis terbuka oleh open_file di service layer
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -66,6 +162,15 @@ class _AttendanceReportPageState extends State<AttendanceReportPage> {
         backgroundColor: AppColors.primary,
         iconTheme: const IconThemeData(color: Colors.white),
         actions: [
+          // TOMBOL EXPORT BARU
+          IconButton(
+            icon: _isExporting 
+              ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2)) 
+              : const Icon(Icons.download),
+            tooltip: "Export Excel (CSV)",
+            onPressed: _isExporting ? null : _showExportDialog,
+          ),
+          // TOMBOL PILIH TANGGAL (HARIAN)
           IconButton(
             icon: const Icon(Icons.calendar_today),
             onPressed: _pickDate,
@@ -84,7 +189,7 @@ class _AttendanceReportPageState extends State<AttendanceReportPage> {
                 Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text("Menampilkan Data:", style: GoogleFonts.poppins(color: Colors.grey, fontSize: 12)),
+                    Text("Menampilkan Data Harian:", style: GoogleFonts.poppins(color: Colors.grey, fontSize: 12)),
                     Text(
                       DateFormat('EEEE, d MMMM yyyy', 'id_ID').format(_selectedDate),
                       style: GoogleFonts.poppins(fontWeight: FontWeight.bold, fontSize: 16, color: AppColors.primary),
@@ -141,7 +246,9 @@ class _AttendanceReportPageState extends State<AttendanceReportPage> {
                         color: Colors.white,
                         borderRadius: BorderRadius.circular(12),
                         boxShadow: [
-                          BoxShadow(color: Colors.black.withValues(alpha: 0.05), blurRadius: 5)
+                          BoxShadow(
+                              color: Colors.black.withValues(alpha: 0.05), // FIX: withOpacity -> withValues
+                              blurRadius: 5)
                         ],
                       ),
                       child: ListTile(
@@ -149,7 +256,7 @@ class _AttendanceReportPageState extends State<AttendanceReportPage> {
                         // Foto User
                         leading: GestureDetector(
                           onTap: () {
-                             // Nanti bisa tambah fitur zoom foto jika diklik
+                             // Fitur zoom foto
                              showDialog(context: context, builder: (_) => Dialog(
                                child: Image.network("${ApiConstants.baseUrl}/${item['photo_url']}"),
                              ));

@@ -1,6 +1,9 @@
 import 'dart:convert';
 import 'package:http/http.dart' as http;
 import '../../core/constants/api_constants.dart';
+import 'dart:io';
+import 'package:path_provider/path_provider.dart';
+import 'package:open_file/open_file.dart';
 
 class AdminService {
   // Pastikan URL ini ditambahkan di api_constants.dart:
@@ -157,5 +160,48 @@ class AdminService {
       return false;
     }
   }
+
+  // 8. Export Laporan ke Excel (CSV)
+  Future<bool> exportReport(int month, int year) async {
+    try {
+      // A. Ambil Data dari API
+      final response = await http.get(
+        Uri.parse("${ApiConstants.baseUrl}/admin/get_monthly_report.php?month=$month&year=$year")
+      );
+      
+      if (response.statusCode != 200) return false;
+      
+      final result = jsonDecode(response.body);
+      if (result['success'] != true) return false;
+      
+      List<dynamic> data = result['data'];
+
+      // B. Buat Header CSV
+      String csvContent = "No,Tanggal,Jam,NIP,Nama Karyawan,Jabatan,Departemen,Tipe Absen,Status\n";
+
+      // C. Isi Data
+      for (var i = 0; i < data.length; i++) {
+        var item = data[i];
+        csvContent += "${i + 1},${item['date']},${item['time']},${item['nip']},${item['name']},${item['position']},${item['dept']},${item['type']},${item['status']}\n";
+      }
+
+      // D. Simpan File ke HP
+      final directory = await getApplicationDocumentsDirectory();
+      final path = "${directory.path}/Laporan_Absensi_${month}_$year.csv";
+      final file = File(path);
+      
+      await file.writeAsString(csvContent);
+
+      // E. Buka File Otomatis
+      await OpenFile.open(path);
+      
+      return true;
+
+    } catch (e) {
+      print("Error Export: $e");
+      return false;
+    }
+  }
 }
+
 

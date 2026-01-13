@@ -2,6 +2,8 @@ import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:http/http.dart' as http;
+import 'package:fl_chart/fl_chart.dart'; // [IMPORT BARU]
+
 import '../../../core/constants/app_colors.dart';
 import '../../../core/constants/api_constants.dart';
 import '../auth/login_page.dart';
@@ -86,16 +88,14 @@ class _AdminDashboardPageState extends State<AdminDashboardPage> {
             
             // Menu Items
             _buildDrawerItem(Icons.dashboard, "Dashboard", true, () {
-              Navigator.pop(context); // Tutup drawer saja
+              Navigator.pop(context); 
             }),
             _buildDrawerItem(Icons.people, "Data Pegawai", false, () {
                Navigator.pop(context); 
-               // BUKA HALAMAN LIST PEGAWAI
                Navigator.push(context, MaterialPageRoute(builder: (context) => const EmployeeListPage()));
             }),
             _buildDrawerItem(Icons.location_on, "Lokasi Kantor", false, () {
-               Navigator.pop(context); // Tutup drawer dulu
-               // Buka Halaman Set Lokasi
+               Navigator.pop(context); 
                Navigator.push(context, MaterialPageRoute(builder: (context) => const SetLocationPage()));
             }),
             _buildDrawerItem(Icons.playlist_add_check, "Persetujuan Izin", false, () {
@@ -103,11 +103,10 @@ class _AdminDashboardPageState extends State<AdminDashboardPage> {
                Navigator.push(context, MaterialPageRoute(builder: (context) => const LeaveApprovalPage()));
             }),
             _buildDrawerItem(Icons.description, "Laporan Absensi", false, () {
-           Navigator.pop(context);
-           // BUKA HALAMAN LAPORAN
-           Navigator.push(context, MaterialPageRoute(builder: (context) => const AttendanceReportPage()));
-        }),
-        _buildDrawerItem(Icons.settings, "Pengaturan Jam Kerja", false, () {
+               Navigator.pop(context);
+               Navigator.push(context, MaterialPageRoute(builder: (context) => const AttendanceReportPage()));
+            }),
+            _buildDrawerItem(Icons.settings, "Pengaturan Jam Kerja", false, () {
                Navigator.pop(context);
                Navigator.push(context, MaterialPageRoute(builder: (context) => const OfficeSettingsPage()));
             }),
@@ -150,7 +149,7 @@ class _AdminDashboardPageState extends State<AdminDashboardPage> {
                   ),
                   const SizedBox(height: 15),
 
-                  // Grid Statistik
+                  // A. Grid Statistik Cards
                   GridView.count(
                     shrinkWrap: true,
                     physics: const NeverScrollableScrollPhysics(),
@@ -159,36 +158,26 @@ class _AdminDashboardPageState extends State<AdminDashboardPage> {
                     mainAxisSpacing: 15,
                     childAspectRatio: 1.4,
                     children: [
-                      _buildStatCard(
-                        "Total Pegawai", 
-                        "$_totalEmployees", 
-                        Icons.people_outline, 
-                        Colors.blue
-                      ),
-                      _buildStatCard(
-                        "Hadir Hari Ini", 
-                        "$_totalPresent", 
-                        Icons.check_circle_outline, 
-                        AppColors.success
-                      ),
-                      _buildStatCard(
-                        "Belum Hadir", 
-                        "${_totalEmployees - _totalPresent}", 
-                        Icons.access_time, 
-                        AppColors.accent
-                      ),
-                      _buildStatCard(
-                        "Izin / Sakit", 
-                        "0", // Nanti update API untuk ambil data izin
-                        Icons.note_alt_outlined, 
-                        Colors.orange
-                      ),
+                      _buildStatCard("Total Pegawai", "$_totalEmployees", Icons.people_outline, Colors.blue),
+                      _buildStatCard("Hadir Hari Ini", "$_totalPresent", Icons.check_circle_outline, AppColors.success),
+                      _buildStatCard("Belum Hadir", "${_totalEmployees - _totalPresent}", Icons.access_time, AppColors.accent),
+                      _buildStatCard("Izin / Sakit", "0", Icons.note_alt_outlined, Colors.orange), // Update logic if needed
                     ],
                   ),
 
+                  const SizedBox(height: 25),
+
+                  // B. GRAFIK CHART (PIE CHART) [BARU]
+                  Text(
+                    "Persentase Kehadiran", 
+                    style: GoogleFonts.poppins(fontSize: 18, fontWeight: FontWeight.bold, color: AppColors.primary)
+                  ),
+                  const SizedBox(height: 15),
+                  _buildAttendanceChart(),
+
                   const SizedBox(height: 30),
 
-                  // Section Data Absensi Terbaru (Placeholder / Contoh UI)
+                  // C. Aktivitas Terbaru
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
@@ -211,7 +200,7 @@ class _AdminDashboardPageState extends State<AdminDashboardPage> {
                       borderRadius: BorderRadius.circular(12),
                       boxShadow: [
                         BoxShadow(
-                          color: Colors.black.withValues(alpha: 0.05), // FIX: withValues pengganti withOpacity
+                          color: Colors.black.withValues(alpha: 0.05),
                           blurRadius: 5,
                           offset: const Offset(0, 2)
                         )
@@ -238,7 +227,110 @@ class _AdminDashboardPageState extends State<AdminDashboardPage> {
     );
   }
 
-  // --- WIDGET HELPERS ---
+  // --- WIDGET CHART BARU ---
+  Widget _buildAttendanceChart() {
+    // Hitung persentase
+    int absent = _totalEmployees - _totalPresent;
+    // Hindari division by zero
+    double presentPercent = _totalEmployees == 0 ? 0 : (_totalPresent / _totalEmployees) * 100;
+    
+    return Container(
+      height: 250,
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(20),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.05),
+            blurRadius: 10,
+            offset: const Offset(0, 4)
+          )
+        ]
+      ),
+      child: Row(
+        children: [
+          // 1. GRAFIK LINGKARAN
+          Expanded(
+            flex: 3,
+            child: Stack(
+              alignment: Alignment.center,
+              children: [
+                PieChart(
+                  PieChartData(
+                    sectionsSpace: 0,
+                    centerSpaceRadius: 40,
+                    sections: [
+                      // Bagian Hadir (Hijau)
+                      PieChartSectionData(
+                        color: AppColors.success,
+                        value: _totalPresent.toDouble(),
+                        title: "${presentPercent.toStringAsFixed(0)}%",
+                        radius: 50,
+                        titleStyle: GoogleFonts.poppins(fontSize: 14, fontWeight: FontWeight.bold, color: Colors.white),
+                      ),
+                      // Bagian Belum Hadir (Abu-abu/Merah Muda)
+                      PieChartSectionData(
+                        color: AppColors.secondary, // atau Colors.red[100]
+                        value: absent.toDouble(),
+                        title: "",
+                        radius: 40,
+                      ),
+                    ],
+                  ),
+                ),
+                // Text di tengah Donat
+                Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text("Total", style: GoogleFonts.poppins(fontSize: 10, color: Colors.grey)),
+                    Text("$_totalEmployees", style: GoogleFonts.poppins(fontSize: 18, fontWeight: FontWeight.bold)),
+                  ],
+                )
+              ],
+            ),
+          ),
+          
+          const SizedBox(width: 20),
+
+          // 2. KETERANGAN (LEGEND)
+          Expanded(
+            flex: 2,
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                _buildLegendItem(color: AppColors.success, label: "Hadir", value: "$_totalPresent"),
+                const SizedBox(height: 15),
+                _buildLegendItem(color: AppColors.secondary, label: "Belum Hadir", value: "$absent"),
+              ],
+            ),
+          )
+        ],
+      ),
+    );
+  }
+
+  Widget _buildLegendItem({required Color color, required String label, required String value}) {
+    return Row(
+      children: [
+        Container(
+          width: 12, height: 12,
+          decoration: BoxDecoration(color: color, shape: BoxShape.circle),
+        ),
+        const SizedBox(width: 8),
+        Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(label, style: GoogleFonts.poppins(fontSize: 12, color: Colors.grey)),
+            Text(value, style: GoogleFonts.poppins(fontWeight: FontWeight.bold, fontSize: 14)),
+          ],
+        )
+      ],
+    );
+  }
+
+  // --- WIDGET DRAWER & STATS LAMA ---
 
   Widget _buildDrawerItem(IconData icon, String title, bool isActive, VoidCallback onTap, {Color? color}) {
     return ListTile(
@@ -251,7 +343,6 @@ class _AdminDashboardPageState extends State<AdminDashboardPage> {
         )
       ),
       selected: isActive,
-      // FIX: withValues agar tidak warning deprecated
       selectedTileColor: AppColors.primary.withValues(alpha: 0.1), 
       onTap: onTap,
     );
@@ -264,7 +355,6 @@ class _AdminDashboardPageState extends State<AdminDashboardPage> {
         color: Colors.white,
         borderRadius: BorderRadius.circular(16),
         boxShadow: [
-          // FIX: withValues pengganti withOpacity
           BoxShadow(color: color.withValues(alpha: 0.1), blurRadius: 10, offset: const Offset(0, 4))
         ],
         border: Border.all(color: color.withValues(alpha: 0.1), width: 1)
