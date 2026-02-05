@@ -1,12 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'core/constants/app_colors.dart';
-import 'presentation/pages/auth/login_page.dart'; // Nanti kita buat ini
+import 'presentation/pages/auth/login_page.dart'; 
 import 'package:intl/date_symbol_data_local.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  await initializeDateFormatting('id_ID', null); // Tambahkan baris ini
+  await initializeDateFormatting('id_ID', null); 
   runApp(const MyApp());
 }
 

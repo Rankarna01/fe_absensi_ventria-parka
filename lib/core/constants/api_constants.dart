@@ -1,28 +1,14 @@
 class ApiConstants {
-  // --- KONFIGURASI LIVE SERVER ---
-  
-  // Masukkan domain hosting kamu di sini.
-  // PENTING: 
-  // 1. Gunakan 'https://' karena hostingersite sudah support SSL (lebih aman).
-  // 2. Jangan pakai slash '/' di paling ujung.
-  
-  // OPSI A: Jika kamu upload isi folder 'absensi_api' langsung ke 'public_html'
   static const String baseUrl = "https://lawngreen-crab-623963.hostingersite.com";
 
-  // OPSI B: Jika kamu upload folder 'absensi_api' ke dalam 'public_html'
-  // static const String baseUrl = "https://lawngreen-crab-623963.hostingersite.com/absensi_api";
-
-  // --- ENDPOINTS (Jangan diubah) ---
-  // Endpoint ini akan otomatis mengikuti baseUrl di atas.
   
-  // Auth
   static const String login = "$baseUrl/auth/login.php";
   static const String updateProfile = "$baseUrl/auth/update_profile.php";
   
   // Attendance
-  static const String checkIn = "$baseUrl/attendance/checkin.php"; // Perhatikan nama file di server (checkin/submit_attendance)
+  static const String checkIn = "$baseUrl/attendance/checkin.php"; 
   static const String checkOut = "$baseUrl/attendance/checkout.php";
-  static const String history = "$baseUrl/attendance/history.php"; // get_history.php?
+  static const String history = "$baseUrl/attendance/history.php"; 
   static const String submitAttendance = "$baseUrl/attendance/submit_attendance.php";
   static const String getTodayStatus = "$baseUrl/attendance/get_today_status.php";
 

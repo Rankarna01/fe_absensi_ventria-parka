@@ -6,9 +6,28 @@ import 'package:path_provider/path_provider.dart';
 import 'package:open_file/open_file.dart';
 
 class AdminService {
-  // Pastikan URL ini ditambahkan di api_constants.dart:
-  // static const String addLocation = "$baseUrl/admin/add_location.php";
+  
 
+  // Ambil Lokasi Kantor Tersimpan
+  Future<Map<String, dynamic>?> getOfficeLocation() async {
+    try {
+      final response = await http.get(
+        Uri.parse("${ApiConstants.baseUrl}/admin/get_location.php")
+      );
+      
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+        if (data['success'] == true) {
+          return data['data'];
+        }
+      }
+      return null;
+    } catch (e) {
+      return null;
+    }
+  }
+
+  // 1. Tambah Lokasi Kantor (FIXED)
   Future<Map<String, dynamic>> addOfficeLocation({
     required String name,
     required double latitude,
@@ -16,12 +35,17 @@ class AdminService {
     required int radius,
   }) async {
     try {
-      // GANTI dengan URL endpoint kamu yang benar
-      // Sementara saya tulis manual, idealnya pakai ApiConstants.addLocation
+      // Pastikan endpoint ini sesuai. Jika di ApiConstants belum ada, gunakan string manual:
+      // "${ApiConstants.baseUrl}/admin/add_location.php"
       final url = "${ApiConstants.baseUrl}/admin/add_location.php"; 
       
       final response = await http.post(
         Uri.parse(url),
+        // --- PERBAIKAN UTAMA DI SINI ---
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        // -------------------------------
         body: jsonEncode({
           "name": name,
           "latitude": latitude,
@@ -40,6 +64,7 @@ class AdminService {
     }
   }
 
+  // Ambil Data Pegawai
   Future<List<dynamic>> getEmployees() async {
     try {
       final response = await http.get(
@@ -55,7 +80,7 @@ class AdminService {
     }
   }
 
-  // 2. Tambah Pegawai
+  // 2. Tambah Pegawai (FIXED HEADER)
   Future<Map<String, dynamic>> addEmployee({
     required String nip,
     required String name,
@@ -66,6 +91,8 @@ class AdminService {
     try {
       final response = await http.post(
         Uri.parse("${ApiConstants.baseUrl}/admin/add_employee.php"),
+        // Tambahkan header JSON agar backend bisa baca
+        headers: {'Content-Type': 'application/json'},
         body: jsonEncode({
           "nip": nip,
           "name": name,
@@ -113,10 +140,13 @@ class AdminService {
     }
   }
 
+  // Update Status Izin (FIXED HEADER)
   Future<bool> updateLeaveStatus(int leaveId, String status) async {
     try {
       final response = await http.post(
         Uri.parse("${ApiConstants.baseUrl}/admin/update_leave_status.php"),
+        // Tambahkan header JSON
+        headers: {'Content-Type': 'application/json'},
         body: jsonEncode({
           "leave_id": leaveId,
           "status": status
@@ -144,10 +174,13 @@ class AdminService {
     }
   }
 
+  // Update Setting Kantor (FIXED HEADER)
   Future<bool> updateOfficeSettings(String start, String end, int tolerance) async {
     try {
       final response = await http.post(
         Uri.parse("${ApiConstants.baseUrl}/admin/update_settings.php"),
+        // Tambahkan header JSON
+        headers: {'Content-Type': 'application/json'},
         body: jsonEncode({
           "office_start_time": start,
           "office_end_time": end,
@@ -203,5 +236,3 @@ class AdminService {
     }
   }
 }
-
-
